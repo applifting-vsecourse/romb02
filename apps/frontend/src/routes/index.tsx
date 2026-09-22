@@ -47,7 +47,7 @@ function LandingPage() {
           </h1>
           <p className="mx-auto mt-4 max-w-md text-lg text-pretty text-muted-foreground">
             Quacker is a tiny social network for short messages. Post a quack, read what everyone
-            else is up to.
+            else is up to. Built by romb02.
           </p>
 
           {/* The call to action depends on who is asking: no point offering an
