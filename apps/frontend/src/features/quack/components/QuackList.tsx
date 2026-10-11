@@ -1,4 +1,4 @@
-import { Loader2, RefreshCw } from "lucide-react"
+import { Loader2, RefreshCw, X } from "lucide-react"
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
@@ -11,9 +11,19 @@ type QuackListProps = {
   isLoading?: boolean
   error?: Error
   onReload?: () => void
+  // The active search, if any — changes the empty state to "nothing matches".
+  searchQuery?: string
+  onClearSearch?: () => void
 }
 
-export function QuackList({ quacks, isLoading, error, onReload }: QuackListProps) {
+export function QuackList({
+  quacks,
+  isLoading,
+  error,
+  onReload,
+  searchQuery,
+  onClearSearch,
+}: QuackListProps) {
   return (
     <div className="flex flex-col">
       {isLoading && quacks.length === 0 ? (
@@ -44,7 +54,25 @@ export function QuackList({ quacks, isLoading, error, onReload }: QuackListProps
         </Alert>
       ) : null}
 
-      {!isLoading && !error && quacks.length === 0 ? (
+      {!isLoading && !error && quacks.length === 0 && searchQuery ? (
+        <div className="flex flex-col items-center gap-3 py-8">
+          <p className="text-center text-sm text-muted-foreground">
+            No quacks match &ldquo;{searchQuery}&rdquo;.
+          </p>
+          {onClearSearch ? (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onClearSearch}
+            >
+              <X className="size-4" />
+              Clear search
+            </Button>
+          ) : null}
+        </div>
+      ) : null}
+
+      {!isLoading && !error && quacks.length === 0 && !searchQuery ? (
         <p className="py-8 text-center text-sm text-muted-foreground">
           No quacks yet. Post the first one.
         </p>

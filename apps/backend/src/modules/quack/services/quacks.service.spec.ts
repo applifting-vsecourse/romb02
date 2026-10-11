@@ -26,7 +26,31 @@ describe('QuacksService', () => {
     const service = new QuacksService(repository);
 
     await expect(service.getQuacks()).resolves.toEqual(quacks);
-    expect(repository.getQuacks).toHaveBeenCalledTimes(1);
+    expect(repository.getQuacks).toHaveBeenCalledWith({ searchTerms: [] });
+  });
+
+  it('splits a search into words that must all match', async () => {
+    const repository = mock<QuackRepository>();
+    repository.getQuacks.mockResolvedValue([]);
+
+    const service = new QuacksService(repository);
+
+    await service.getQuacks({ search: '  rubber   duck ' });
+    expect(repository.getQuacks).toHaveBeenCalledWith({
+      searchTerms: ['rubber', 'duck'],
+    });
+  });
+
+  it('drops a leading @ so usernames match as they are displayed', async () => {
+    const repository = mock<QuackRepository>();
+    repository.getQuacks.mockResolvedValue([]);
+
+    const service = new QuacksService(repository);
+
+    await service.getQuacks({ search: '@CaffeinatedDuck bread @' });
+    expect(repository.getQuacks).toHaveBeenCalledWith({
+      searchTerms: ['CaffeinatedDuck', 'bread'],
+    });
   });
 
   it('creates a quack owned by the signed-in user', async () => {

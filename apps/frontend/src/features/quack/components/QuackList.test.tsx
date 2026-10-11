@@ -53,4 +53,27 @@ describe("QuackList", () => {
     await userEvent.click(screen.getByRole("button", { name: /reload/i }))
     expect(onReload).toHaveBeenCalledOnce()
   })
+
+  it("invites posting when there are no quacks at all", () => {
+    render(<QuackList quacks={[]} />)
+
+    expect(screen.getByText("No quacks yet. Post the first one.")).toBeInTheDocument()
+  })
+
+  it("says nothing matches a search and offers to clear it", async () => {
+    const onClearSearch = vi.fn()
+    render(
+      <QuackList
+        quacks={[]}
+        searchQuery="xyz"
+        onClearSearch={onClearSearch}
+      />,
+    )
+
+    expect(screen.getByText("No quacks match “xyz”.")).toBeInTheDocument()
+    expect(screen.queryByText(/Post the first one/)).not.toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole("button", { name: "Clear search" }))
+    expect(onClearSearch).toHaveBeenCalledOnce()
+  })
 })
