@@ -31,3 +31,5 @@ The CLI puts `shadow-xs`/`shadow-sm` on inputs, textareas and cards. [`DESIGN.md
 Assume the dev servers are up. If something is listening on the app's ports, that is this application: use it. Don't start a second instance, don't restart it, don't run `pnpm dev`.
 
 Don't reach for the browser to check your own work. Tests and type-checks are the evidence; open the running app when asked to, not on your own initiative.
+
+Never carry over the language of the conversation into the application. The application itself is strictly in English and no other language, unless EXPLICITLY mentioned in the prompt.
