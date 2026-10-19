@@ -15,10 +15,10 @@ beforeAll(() => {
   Element.prototype.scrollIntoView = vi.fn()
 })
 
-const renderForm = () =>
+const renderForm = (props: Parameters<typeof QuackForm>[0] = {}) =>
   render(
     <QueryClientProvider client={new QueryClient()}>
-      <QuackForm />
+      <QuackForm {...props} />
     </QueryClientProvider>,
   )
 
@@ -50,5 +50,22 @@ describe("QuackForm", () => {
       text: "just a quack",
       mood: undefined,
     })
+  })
+
+  it("starts with the author's default mood and returns to it after posting", async () => {
+    vi.mocked(addQuack).mockResolvedValue({} as Awaited<ReturnType<typeof addQuack>>)
+    renderForm({ defaultMood: "silly" })
+
+    const mood = screen.getByRole("combobox", { name: "Mood" })
+    expect(mood).toHaveTextContent("Silly")
+
+    await userEvent.click(mood)
+    await userEvent.click(screen.getByRole("option", { name: /Sad/ }))
+    await userEvent.type(screen.getByLabelText("New quack"), "rain again")
+    await userEvent.click(screen.getByRole("button", { name: "Quack" }))
+
+    await waitFor(() => expect(addQuack).toHaveBeenCalled())
+    expect(vi.mocked(addQuack).mock.calls[0]?.[0]).toEqual({ text: "rain again", mood: "sad" })
+    await waitFor(() => expect(mood).toHaveTextContent("Silly"))
   })
 })

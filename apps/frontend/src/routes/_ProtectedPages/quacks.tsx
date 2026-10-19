@@ -1,10 +1,11 @@
 import { useCallback } from "react"
-import { useQuery } from "@tanstack/react-query"
+import { useQuery, useSuspenseQuery } from "@tanstack/react-query"
 import { createFileRoute } from "@tanstack/react-router"
 import { z } from "zod"
 
 import { Seo } from "@/components/Seo"
 
+import { profileQueryOptions } from "@/features/profile/api/profileQueryOptions"
 import { quacksQueryOptions } from "@/features/quack/api/quacksQueryOptions"
 import { QuackForm } from "@/features/quack/components/QuackForm"
 import { QuackList } from "@/features/quack/components/QuackList"
@@ -16,8 +17,11 @@ const quacksSearchParamsSchema = z.object({
 })
 
 export const Route = createFileRoute("/_ProtectedPages/quacks")({
-  component: QuacksPage,
+  // The post form starts with the author's default mood, so it needs the
+  // profile before it renders.
   validateSearch: quacksSearchParamsSchema,
+  component: QuacksPage,
+  loader: ({ context }) => context.queryClient.ensureQueryData(profileQueryOptions()),
 })
 
 function QuacksPage() {
@@ -26,6 +30,7 @@ function QuacksPage() {
   const searchQuery = toSearchQuery(q)
   const navigate = Route.useNavigate()
   const quacksQuery = useQuery(quacksQueryOptions({ q: searchQuery }))
+  const { data: profile } = useSuspenseQuery(profileQueryOptions())
 
   // Replace rather than push, so typing doesn't fill the history with one
   // entry per keystroke.
@@ -40,7 +45,10 @@ function QuacksPage() {
       <section className="mx-auto w-full max-w-2xl px-4 py-8">
         <h1 className="mb-4 text-2xl font-semibold tracking-tight">Quacks</h1>
 
-        <QuackForm className="mb-6" />
+        <QuackForm
+          defaultMood={profile.defaultMood ?? undefined}
+          className="mb-6"
+        />
 
         <QuackSearch
           query={searchQuery}
