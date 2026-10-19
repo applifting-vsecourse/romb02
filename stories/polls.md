@@ -5,7 +5,8 @@
 ## Creating a poll
 
 - A poll is an optional add-on to a quack. The quack text is the question. Mood still works as usual.
-- The post form gets an "Add poll" toggle that shows answer fields:
+- The post form has **Quack / Poll** tabs above it. Text and mood carry over when switching tabs. Going back to Quack posts without a poll, and the form returns to the Quack tab after posting.
+- The Poll tab labels the text "Question" and shows the answer fields:
   - 2 to 4 answers. Answer rows can be added or removed within those limits.
   - Each answer is required and up to 80 characters, with leading and trailing spaces trimmed.
   - Answers in one poll can't repeat, ignoring case.

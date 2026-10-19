@@ -106,8 +106,8 @@ The visibility and closed rules live in one pure domain function, `toPollView(po
 ## Frontend
 
 - **Schemas:** `quackSchemas.ts` gets a `pollSchema` with optional `votes`/`totalVotes`, plus `quack.poll: pollSchema.nullable()`.
-- **Form:** `QuackForm` gets an "Add poll" toggle, 2–4 answer inputs with add/remove buttons, and a deadline `Select` (default "No deadline"). The answer rules are mirrored in zod, and errors show under each field.
-  - The toggle needs a kit control: add it with `pnpm dlx shadcn@latest add switch` and strip any shadow.
+- **Form:** `QuackForm` gets **Quack / Poll** tabs. Both tabs share the text and mood fields. The Poll tab relabels the text "Question" and adds 2–4 answer inputs with add/remove buttons and a deadline `Select` (default "No deadline"). The answer rules are mirrored in zod, and errors show under each field.
+  - The tabs come from the kit: `pnpm dlx shadcn@latest add tabs`, with the active tab's `shadow-sm` stripped.
 - **`QuackPoll` component:**
   - Before voting, answers are outline buttons.
   - After voting, the author's view, or once closed, it shows results: a bar, %, count, "N votes", a check on your pick, and "Closes in …" or "Closed".
@@ -123,12 +123,12 @@ The visibility and closed rules live in one pure domain function, `toPollView(po
 
 The backend tests all use a mocked repository, and this feature doesn't add database-backed tests. The two guarantees that matter most come from Postgres constraints rather than application code, and the migration is what creates them. Unit tests cover the service logic: the closed check, answer/poll matching and the `409`/`400`/`404` responses. The constraints themselves are checked by hand, and the PR description carries these steps so a reviewer can repeat them against the running app:
 
-1. **The constraints exist.** In `psql`, `\d poll_vote` shows the unique index on `(poll_id, user_id)` and the foreign key on `(option_id, poll_id)` → `poll_option(id, poll_id)`.
+1. **The constraints exist.** In `psql`, `\d poll_vote` shows the unique index `poll_vote_pollId_userId_key` on `("pollId", "userId")` and the foreign key `poll_vote_optionId_pollId_fkey` on `("optionId", "pollId")` → `poll_option(id, "pollId")`.
 2. **One vote under concurrency.**
    - Sign in, copy the session cookie, and fire about 20 parallel `PUT /api/quacks/:quackId/poll/vote` requests at a seeded open poll, spread across its answers (for example `xargs -P 20 curl …`).
    - Every request returns `200`.
-   - `SELECT count(*) FROM poll_vote WHERE poll_id = … AND user_id = …` returns `1`.
-3. **Answer must belong to the poll.** A raw `INSERT INTO poll_vote` using an `option_id` from a different poll fails with a foreign-key violation.
+   - `SELECT count(*) FROM poll_vote WHERE "pollId" = … AND "userId" = …` returns `1`.
+3. **Answer must belong to the poll.** A raw `INSERT INTO poll_vote` using an `"optionId"` from a different poll fails with a foreign-key violation.
 4. **Closed poll.** A `PUT` against the seeded closed poll returns `409`, and the vote count doesn't change.
 
 ## Build order
