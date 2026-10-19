@@ -1,3 +1,5 @@
+import { Poll, PollView } from './poll';
+
 export const MOODS = ['happy', 'sad', 'angry', 'silly'] as const;
 
 export type Mood = (typeof MOODS)[number];
@@ -16,4 +18,9 @@ export type Quack = {
   createdAt: Date;
   updatedAt: Date;
   user?: QuackAuthor;
+  // Loaded for one viewer; `undefined` when not loaded, `null` for no poll.
+  poll?: Poll | null;
 };
+
+// A quack as one viewer is allowed to see it.
+export type QuackView = Omit<Quack, 'poll'> & { poll: PollView | null };
