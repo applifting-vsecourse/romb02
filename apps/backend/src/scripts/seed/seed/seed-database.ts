@@ -28,7 +28,7 @@ export const seedDatabase = async (
   // Drop existing database data from all tables
   try {
     await prisma.$executeRawUnsafe(
-      'TRUNCATE TABLE "quack", "session", "account", "verification", "user" RESTART IDENTITY CASCADE;',
+      'TRUNCATE TABLE "poll_vote", "poll_option", "poll", "quack", "session", "account", "verification", "user" RESTART IDENTITY CASCADE;',
     );
   } catch (error) {
     console.error('Error truncating tables:', error);
@@ -86,7 +86,17 @@ export const seedDatabase = async (
 
   // Listed oldest first. The feed sorts newest first, so the last entry here is
   // the one at the top of the screen.
-  const exampleQuacks: { author: User; minutesAgo: number; text: string }[] = [
+  const exampleQuacks: {
+    author: User;
+    minutesAgo: number;
+    text: string;
+    poll?: {
+      options: string[];
+      // minutes from now; negative = already closed, undefined = never closes
+      closesInMinutes?: number;
+      votes?: { voter: User; option: number }[];
+    };
+  }[] = [
     {
       author: pondAdmin,
       minutesAgo: 2870,
@@ -111,6 +121,25 @@ Crust: excellent. Delivery: amateur. 6/10.`,
       text: `just spilled coffee on my keyboard
 now every time i type "duck" it autocorrects to "quack"
 send help or more caffeine`,
+    },
+    {
+      author: pondAdmin,
+      minutesAgo: 1700,
+      text: `Quick poll for the pond committee: when should we hold the reed maintenance vote?`,
+      poll: {
+        options: [
+          'Monday morning',
+          'Wednesday evening',
+          'Never, the heron decides',
+        ],
+        closesInMinutes: -260,
+        votes: [
+          { voter: caffeinatedDuck, option: 2 },
+          { voter: deepDuckThoughts, option: 2 },
+          { voter: breadCritic, option: 1 },
+          { voter: migrationSeason, option: 0 },
+        ],
+      },
     },
     {
       author: deepDuckThoughts,
@@ -155,6 +184,19 @@ ducks: assemble like the Avengers
 i fear i may have started something`,
     },
     {
+      author: breadCritic,
+      minutesAgo: 45,
+      text: `Settling this once and for all. Which bread do we review next?`,
+      poll: {
+        options: ['Rye', 'Brioche', 'Baguette', 'Pita'],
+        votes: [
+          { voter: caffeinatedDuck, option: 1 },
+          { voter: migrationSeason, option: 2 },
+          { voter: pondAdmin, option: 1 },
+        ],
+      },
+    },
+    {
       author: pondAdmin,
       minutesAgo: 20,
       text: `The bread situation has been resolved. The swan has been spoken to.
@@ -164,11 +206,22 @@ Please stop tagging me.`,
 
   const now = Date.now();
 
-  for (const { author, minutesAgo, text } of exampleQuacks) {
+  for (const { author, minutesAgo, text, poll } of exampleQuacks) {
     await createQuack(prisma, {
       text,
       userId: author.id,
       createdAt: new Date(now - minutesAgo * MINUTE_IN_MS),
+      poll: poll && {
+        options: poll.options,
+        closesAt:
+          poll.closesInMinutes === undefined
+            ? null
+            : new Date(now + poll.closesInMinutes * MINUTE_IN_MS),
+        votes: poll.votes?.map(({ voter, option }) => ({
+          userId: voter.id,
+          option,
+        })),
+      },
     });
   }
 };

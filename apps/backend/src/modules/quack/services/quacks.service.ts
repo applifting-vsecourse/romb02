@@ -1,7 +1,24 @@
-import { Mood, Quack } from '@/modules/quack/domain/quack';
+import {
+  isPollClosed,
+  PollDuration,
+  PollView,
+  toClosesAt,
+  toPollView,
+} from '@/modules/quack/domain/poll';
+import { Mood, Quack, QuackView } from '@/modules/quack/domain/quack';
 import { QuackRepository } from '@/modules/quack/repositories/quack.repository';
 import { Identity } from '@/shared/auth/domain/identity';
-import { Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+
+export const POLL_NOT_FOUND_MESSAGE = 'That poll does not exist';
+export const POLL_CLOSED_MESSAGE = 'This poll is closed';
+export const OPTION_NOT_IN_POLL_MESSAGE =
+  'That answer is not part of this poll';
 
 // Splits a search into words that must all match. A leading "@" is dropped so
 // "@alice" finds the username the UI renders as "@alice".
@@ -11,25 +28,80 @@ const toSearchTerms = (search?: string): string[] =>
     .map((word) => word.replace(/^@+/, ''))
     .filter((word) => word.length > 0);
 
+// Everything that leaves the service goes through here, so a viewer never
+// receives counts they aren't allowed to see.
+const toQuackView = (quack: Quack, viewerId: string, now: Date): QuackView => ({
+  ...quack,
+  poll: quack.poll ? toPollView(quack.poll, viewerId, now) : null,
+});
+
 @Injectable()
 export class QuacksService {
   constructor(private readonly quackRepository: QuackRepository) {}
 
-  async getQuacks(filter: { search?: string } = {}): Promise<Quack[]> {
-    return this.quackRepository.getQuacks({
+  async getQuacks(
+    viewer: Identity,
+    filter: { search?: string } = {},
+  ): Promise<QuackView[]> {
+    const quacks = await this.quackRepository.getQuacks({
+      viewerId: viewer.id,
       searchTerms: toSearchTerms(filter.search),
     });
+    const now = new Date();
+    return quacks.map((quack) => toQuackView(quack, viewer.id, now));
   }
 
   async createQuack(
     user: Identity,
-    quackData: { text: string; mood?: Mood },
-  ): Promise<Quack> {
-    return this.quackRepository.createQuack({
+    quackData: {
+      text: string;
+      mood?: Mood;
+      poll?: { options: string[]; duration?: PollDuration };
+    },
+  ): Promise<QuackView> {
+    const now = new Date();
+    const quack = await this.quackRepository.createQuack({
       text: quackData.text,
       mood: quackData.mood,
       // the author is taken from the session, never from the request body
       userId: user.id,
+      // the deadline is computed on the server clock, never sent by the client
+      poll: quackData.poll && {
+        options: quackData.poll.options,
+        closesAt: toClosesAt(quackData.poll.duration, now),
+      },
     });
+    return toQuackView(quack, user.id, now);
+  }
+
+  // Sets the user's vote, replacing any earlier one. There is deliberately no
+  // way to take a vote back.
+  async vote(
+    user: Identity,
+    quackId: string,
+    optionId: string,
+  ): Promise<PollView> {
+    const poll = await this.quackRepository.getPollByQuackId(quackId, user.id);
+    if (!poll) throw new NotFoundException(POLL_NOT_FOUND_MESSAGE);
+
+    if (isPollClosed(poll, new Date())) {
+      throw new ConflictException(POLL_CLOSED_MESSAGE);
+    }
+    if (!poll.options.some((option) => option.id === optionId)) {
+      throw new BadRequestException(OPTION_NOT_IN_POLL_MESSAGE);
+    }
+
+    await this.quackRepository.upsertVote({
+      pollId: poll.id,
+      optionId,
+      userId: user.id,
+    });
+
+    const updated = await this.quackRepository.getPollByQuackId(
+      quackId,
+      user.id,
+    );
+    if (!updated) throw new NotFoundException(POLL_NOT_FOUND_MESSAGE);
+    return toPollView(updated, user.id, new Date());
   }
 }
