@@ -33,3 +33,5 @@ Assume the dev servers are up. If something is listening on the app's ports, tha
 Don't reach for the browser to check your own work. Tests and type-checks are the evidence; open the running app when asked to, not on your own initiative.
 
 Never carry over the language of the conversation into the application. The application itself is strictly in English and no other language, unless EXPLICITLY mentioned in the prompt.
+
+Run the formatter after you're done with the implementation.
