@@ -7,6 +7,7 @@ import { Seo } from "@/components/Seo"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 import { useSession } from "@/features/auth/hooks/useSession"
+import { canModerate } from "@/features/auth/lib/roles"
 import { profileQueryOptions } from "@/features/profile/api/profileQueryOptions"
 import { quackAuthorFilterSchema } from "@/features/quack/api/quackSchemas"
 import { quacksQueryOptions } from "@/features/quack/api/quacksQueryOptions"
@@ -106,6 +107,7 @@ function QuacksPage() {
                 searchQuery={searchQuery}
                 onClearSearch={() => setSearchQuery(undefined)}
                 currentUserId={user?.id}
+                canModerate={canModerate(user?.role)}
                 isOnlyMine={value === "mine"}
                 onWriteFirst={() => textRef.current?.focus()}
               />

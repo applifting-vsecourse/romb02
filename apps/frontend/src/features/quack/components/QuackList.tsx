@@ -16,6 +16,8 @@ type QuackListProps = {
   onClearSearch?: () => void
   // The signed-in user — their own quacks get a delete action.
   currentUserId?: string
+  // Moderators get a delete action on everyone's quacks.
+  canModerate?: boolean
   // Showing only the signed-in user's quacks — changes the empty state.
   isOnlyMine?: boolean
   onWriteFirst?: () => void
@@ -29,6 +31,7 @@ export function QuackList({
   searchQuery,
   onClearSearch,
   currentUserId,
+  canModerate,
   isOnlyMine,
   onWriteFirst,
 }: QuackListProps) {
@@ -108,7 +111,13 @@ export function QuackList({
         <QuackItem
           key={quack.id}
           quack={quack}
-          canDelete={currentUserId !== undefined && quack.userId === currentUserId}
+          deleteAs={
+            currentUserId !== undefined && quack.userId === currentUserId
+              ? "author"
+              : canModerate
+                ? "moderator"
+                : undefined
+          }
         />
       ))}
     </div>

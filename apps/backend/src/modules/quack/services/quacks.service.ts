@@ -8,6 +8,7 @@ import {
 import { Mood, Quack, QuackView } from '@/modules/quack/domain/quack';
 import { QuackRepository } from '@/modules/quack/repositories/quack.repository';
 import { Identity } from '@/shared/auth/domain/identity';
+import { canModerate } from '@/shared/auth/domain/roles';
 import {
   BadRequestException,
   ConflictException,
@@ -78,18 +79,21 @@ export class QuacksService {
     return toQuackView(quack, user.id, now);
   }
 
-  // Only the author may delete a quack. The repository re-checks ownership in
-  // the delete itself; the lookup is just there to tell "gone" from "not yours".
+  // The author may delete their own quack; moderators and admins may delete
+  // any quack. For an author, the repository re-checks ownership in the delete
+  // itself; the lookup is just there to tell "gone" from "not yours".
   async deleteQuack(user: Identity, quackId: string): Promise<void> {
     const quack = await this.quackRepository.getQuackById(quackId);
     if (!quack) throw new NotFoundException(QUACK_NOT_FOUND_MESSAGE);
-    if (quack.userId !== user.id) {
+
+    const isAuthor = quack.userId === user.id;
+    if (!isAuthor && !canModerate(user)) {
       throw new ForbiddenException(NOT_QUACK_AUTHOR_MESSAGE);
     }
 
     const deleted = await this.quackRepository.deleteQuack({
       quackId,
-      authorId: user.id,
+      authorId: isAuthor ? user.id : null,
     });
     // Deleted by a parallel request in between.
     if (!deleted) throw new NotFoundException(QUACK_NOT_FOUND_MESSAGE);

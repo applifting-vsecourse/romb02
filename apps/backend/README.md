@@ -127,7 +127,21 @@ $ pnpm backend prisma:migrations:run   # creates + applies a migration
 $ pnpm backend seed                    # refill demo data
 ```
 
-### Test
+### Roles
+
+Every user has one role: `user` (the default), `moderator` or `admin`. Moderators and admins can delete any quack; everyone else only their own. The seed creates `moderator@example.com` / `password6` as a moderator.
+
+Nobody can change their own role through the API. There is no UI for it either, so a developer grants or removes it directly in the database:
+
+```sql
+-- grant
+UPDATE "user" SET role = 'moderator' WHERE email = 'someone@example.com';
+-- remove
+UPDATE "user" SET role = 'user' WHERE email = 'someone@example.com';
+```
+
+Run it with `psql` against the target database (or edit the row in `pnpm backend prisma:studio` locally). The server reads the role on every request, so the change applies to the user's next API call without signing out. An already open page shows or hides the Delete buttons once it refetches the session (on reload, or on refocus after 30 seconds); until then the server still enforces the new role.
+
 
 There is one example unit test (`src/modules/quack/services/quacks.service.spec.ts`) showing the pattern: mock the repository, test the service in isolation. CI runs it on every PR.
 

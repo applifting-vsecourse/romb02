@@ -33,7 +33,11 @@ const theirs = aQuack({
 
 // Renders the feed from the query cache, the way the real page does, so a
 // deleted quack disappearing is what the user would actually see.
-const renderFeed = (quacks: Quack[], serverQuacks: Quack[] = quacks) => {
+const renderFeed = (
+  quacks: Quack[],
+  serverQuacks: Quack[] = quacks,
+  { canModerate = false }: { canModerate?: boolean } = {},
+) => {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   const queryKey = quackKeys.list({})
   queryClient.setQueryData(queryKey, quacks)
@@ -50,6 +54,7 @@ const renderFeed = (quacks: Quack[], serverQuacks: Quack[] = quacks) => {
       <QuackList
         quacks={data ?? []}
         currentUserId="me"
+        canModerate={canModerate}
       />
     )
   }
@@ -124,5 +129,38 @@ describe("Deleting a quack", () => {
     expect(screen.getByText("my quack")).toBeInTheDocument()
     // The dialog stays open so the user can try again.
     expect(screen.getByRole("alertdialog")).toBeInTheDocument()
+  })
+
+  describe("as a moderator", () => {
+    it("offers the delete action on everyone's quacks", () => {
+      renderFeed([mine, theirs], undefined, { canModerate: true })
+
+      expect(screen.getAllByRole("button", { name: "Delete quack" })).toHaveLength(2)
+    })
+
+    it("names the author when deleting someone else's quack", async () => {
+      vi.mocked(deleteQuack).mockResolvedValue()
+      renderFeed([mine, theirs], [mine], { canModerate: true })
+
+      await userEvent.click(
+        within(articleWith("their quack")).getByRole("button", { name: "Delete quack" }),
+      )
+      const dialog = screen.getByRole("alertdialog", { name: "Delete @PondAdmin's quack?" })
+      expect(within(dialog).getByText(/You're removing it as a moderator/)).toBeInTheDocument()
+
+      await userEvent.click(within(dialog).getByRole("button", { name: "Delete" }))
+
+      expect(vi.mocked(deleteQuack).mock.calls[0]?.[0]).toBe("q2")
+      await waitFor(() => expect(screen.queryByText("their quack")).not.toBeInTheDocument())
+    })
+
+    it("shows the usual dialog on their own quack", async () => {
+      renderFeed([mine], undefined, { canModerate: true })
+
+      await userEvent.click(screen.getByRole("button", { name: "Delete quack" }))
+
+      expect(screen.getByRole("alertdialog", { name: "Delete this quack?" })).toBeInTheDocument()
+      expect(screen.queryByText(/as a moderator/)).not.toBeInTheDocument()
+    })
   })
 })
