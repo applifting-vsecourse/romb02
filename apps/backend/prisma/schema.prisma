@@ -17,6 +17,8 @@ datasource db {
 
 enum UserRole {
   user
+  // can delete any quack
+  moderator
   admin
 
   @@map("user_role")

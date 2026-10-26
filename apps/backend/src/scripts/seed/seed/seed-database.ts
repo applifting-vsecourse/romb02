@@ -82,6 +82,15 @@ export const seedDatabase = async (
     username: 'PondAdmin',
   });
 
+  // Can delete any quack. Posts nothing of their own.
+  await createUser(prisma, auth, {
+    email: 'moderator@example.com',
+    password: 'password6',
+    name: 'Moderator Duck',
+    username: 'ModeratorDuck',
+    role: 'moderator',
+  });
+
   console.log('Creating example quacks');
 
   // Listed oldest first. The feed sorts newest first, so the last entry here is

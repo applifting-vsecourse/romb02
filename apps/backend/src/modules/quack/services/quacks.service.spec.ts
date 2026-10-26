@@ -13,7 +13,7 @@ import {
 import { mock } from 'jest-mock-extended';
 import { QuacksService } from './quacks.service';
 
-const viewer = { id: 'u1' } as Identity;
+const viewer = { id: 'u1', role: 'user' } as Identity;
 
 const aQuack = (overrides: Partial<Quack> = {}): Quack => ({
   id: 'q1',
@@ -272,6 +272,43 @@ describe('QuacksService', () => {
 
       await expect(service.deleteQuack(viewer, 'q1')).resolves.toBeUndefined();
       // ownership is enforced in the delete itself, not only by the lookup
+      expect(repository.deleteQuack).toHaveBeenCalledWith({
+        quackId: 'q1',
+        authorId: 'u1',
+      });
+    });
+
+    it.each(['moderator', 'admin'])(
+      "lets a %s delete someone else's quack",
+      async (role) => {
+        const repository = mock<QuackRepository>();
+        repository.getQuackById.mockResolvedValue(
+          aQuack({ userId: 'someone' }),
+        );
+        repository.deleteQuack.mockResolvedValue(true);
+
+        const service = new QuacksService(repository);
+        const moderator = { id: 'u1', role } as Identity;
+
+        await expect(
+          service.deleteQuack(moderator, 'q1'),
+        ).resolves.toBeUndefined();
+        expect(repository.deleteQuack).toHaveBeenCalledWith({
+          quackId: 'q1',
+          authorId: null,
+        });
+      },
+    );
+
+    it("keeps a moderator's own delete scoped to them", async () => {
+      const repository = mock<QuackRepository>();
+      repository.getQuackById.mockResolvedValue(aQuack({ userId: 'u1' }));
+      repository.deleteQuack.mockResolvedValue(true);
+
+      const service = new QuacksService(repository);
+      const moderator = { id: 'u1', role: 'moderator' } as Identity;
+
+      await service.deleteQuack(moderator, 'q1');
       expect(repository.deleteQuack).toHaveBeenCalledWith({
         quackId: 'q1',
         authorId: 'u1',

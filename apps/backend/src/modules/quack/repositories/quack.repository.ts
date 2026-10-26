@@ -153,16 +153,18 @@ export class QuackRepository {
     return quack ? mapPrismaQuackToDomain(quack) : null;
   }
 
-  // Deletes the quack only if it belongs to the given author, in one statement,
-  // so ownership can't change between a check and the delete. The poll, its
+  // With an `authorId`, deletes the quack only if it belongs to that author, in
+  // one statement, so ownership can't change between a check and the delete.
+  // `null` deletes it whoever wrote it — for moderators. It is explicit rather
+  // than optional so a forgotten argument can't widen the delete. The poll, its
   // options and votes go with it (ON DELETE CASCADE). Returns whether a quack
   // was deleted.
   async deleteQuack(filter: {
     quackId: string;
-    authorId: string;
+    authorId: string | null;
   }): Promise<boolean> {
     const { count } = await this.prisma.quack.deleteMany({
-      where: { id: filter.quackId, userId: filter.authorId },
+      where: { id: filter.quackId, userId: filter.authorId ?? undefined },
     });
     return count > 0;
   }
