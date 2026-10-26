@@ -1,4 +1,4 @@
-import { Loader2, RefreshCw, X } from "lucide-react"
+import { Loader2, PenLine, RefreshCw, X } from "lucide-react"
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
@@ -14,6 +14,11 @@ type QuackListProps = {
   // The active search, if any — changes the empty state to "nothing matches".
   searchQuery?: string
   onClearSearch?: () => void
+  // The signed-in user — their own quacks get a delete action.
+  currentUserId?: string
+  // Showing only the signed-in user's quacks — changes the empty state.
+  isOnlyMine?: boolean
+  onWriteFirst?: () => void
 }
 
 export function QuackList({
@@ -23,6 +28,9 @@ export function QuackList({
   onReload,
   searchQuery,
   onClearSearch,
+  currentUserId,
+  isOnlyMine,
+  onWriteFirst,
 }: QuackListProps) {
   return (
     <div className="flex flex-col">
@@ -72,7 +80,25 @@ export function QuackList({
         </div>
       ) : null}
 
-      {!isLoading && !error && quacks.length === 0 && !searchQuery ? (
+      {!isLoading && !error && quacks.length === 0 && !searchQuery && isOnlyMine ? (
+        <div className="flex flex-col items-center gap-3 py-8">
+          <p className="text-center text-sm text-muted-foreground">
+            You haven&apos;t posted any quacks yet.
+          </p>
+          {onWriteFirst ? (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onWriteFirst}
+            >
+              <PenLine className="size-4" />
+              Write your first quack
+            </Button>
+          ) : null}
+        </div>
+      ) : null}
+
+      {!isLoading && !error && quacks.length === 0 && !searchQuery && !isOnlyMine ? (
         <p className="py-8 text-center text-sm text-muted-foreground">
           No quacks yet. Post the first one.
         </p>
@@ -82,6 +108,7 @@ export function QuackList({
         <QuackItem
           key={quack.id}
           quack={quack}
+          canDelete={currentUserId !== undefined && quack.userId === currentUserId}
         />
       ))}
     </div>

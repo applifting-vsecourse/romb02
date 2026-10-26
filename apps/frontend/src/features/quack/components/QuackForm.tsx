@@ -1,3 +1,4 @@
+import type { RefObject } from "react"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Loader2, Plus, X } from "lucide-react"
 import { useFieldArray, useForm, useWatch } from "react-hook-form"
@@ -90,10 +91,12 @@ type QuackFormProps = {
   // The author's chosen default from their settings — the form starts with it
   // and returns to it after each post.
   defaultMood?: Mood
+  // Lets the page move focus to the text field (e.g. from an empty state).
+  textRef?: RefObject<HTMLTextAreaElement | null>
   className?: string
 }
 
-export function QuackForm({ defaultMood, className }: QuackFormProps) {
+export function QuackForm({ defaultMood, textRef, className }: QuackFormProps) {
   const addQuack = useAddQuack()
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -145,6 +148,10 @@ export function QuackForm({ defaultMood, className }: QuackFormProps) {
                 placeholder={textPlaceholder}
                 disabled={addQuack.isPending}
                 {...field}
+                ref={(element) => {
+                  field.ref(element)
+                  if (textRef) textRef.current = element
+                }}
               />
             </FormControl>
             <FormMessage />

@@ -43,6 +43,10 @@ export const quackSchema = z.object({
 
 export const quacksSchema = z.array(quackSchema)
 
+// "me" narrows the feed to the signed-in user's own quacks.
+export const quackAuthorFilterSchema = z.enum(["me"])
+
 export type Mood = z.infer<typeof moodSchema>
 export type Quack = z.infer<typeof quackSchema>
 export type Poll = z.infer<typeof pollSchema>
+export type QuackAuthorFilter = z.infer<typeof quackAuthorFilterSchema>

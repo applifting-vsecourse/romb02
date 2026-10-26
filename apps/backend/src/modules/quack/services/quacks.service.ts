@@ -11,12 +11,15 @@ import { Identity } from '@/shared/auth/domain/identity';
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 
 export const POLL_NOT_FOUND_MESSAGE = 'That poll does not exist';
 export const POLL_CLOSED_MESSAGE = 'This poll is closed';
+export const QUACK_NOT_FOUND_MESSAGE = 'That quack does not exist';
+export const NOT_QUACK_AUTHOR_MESSAGE = 'You can only delete your own quacks';
 export const OPTION_NOT_IN_POLL_MESSAGE =
   'That answer is not part of this poll';
 
@@ -41,11 +44,12 @@ export class QuacksService {
 
   async getQuacks(
     viewer: Identity,
-    filter: { search?: string } = {},
+    filter: { search?: string; onlyMine?: boolean } = {},
   ): Promise<QuackView[]> {
     const quacks = await this.quackRepository.getQuacks({
       viewerId: viewer.id,
       searchTerms: toSearchTerms(filter.search),
+      authorId: filter.onlyMine ? viewer.id : undefined,
     });
     const now = new Date();
     return quacks.map((quack) => toQuackView(quack, viewer.id, now));
@@ -72,6 +76,23 @@ export class QuacksService {
       },
     });
     return toQuackView(quack, user.id, now);
+  }
+
+  // Only the author may delete a quack. The repository re-checks ownership in
+  // the delete itself; the lookup is just there to tell "gone" from "not yours".
+  async deleteQuack(user: Identity, quackId: string): Promise<void> {
+    const quack = await this.quackRepository.getQuackById(quackId);
+    if (!quack) throw new NotFoundException(QUACK_NOT_FOUND_MESSAGE);
+    if (quack.userId !== user.id) {
+      throw new ForbiddenException(NOT_QUACK_AUTHOR_MESSAGE);
+    }
+
+    const deleted = await this.quackRepository.deleteQuack({
+      quackId,
+      authorId: user.id,
+    });
+    // Deleted by a parallel request in between.
+    if (!deleted) throw new NotFoundException(QUACK_NOT_FOUND_MESSAGE);
   }
 
   // Sets the user's vote, replacing any earlier one. There is deliberately no

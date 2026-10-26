@@ -1,9 +1,16 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
-import { IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
+import {
+  IsIn,
+  IsOptional,
+  IsString,
+  MaxLength,
+  MinLength,
+} from 'class-validator';
 
 export const SEARCH_MIN_LENGTH = 2;
 export const SEARCH_MAX_LENGTH = 100;
+export const AUTHOR_FILTERS = ['me'] as const;
 
 export class ListQuacksQueryDto {
   @ApiPropertyOptional({
@@ -21,4 +28,12 @@ export class ListQuacksQueryDto {
   @MinLength(SEARCH_MIN_LENGTH)
   @MaxLength(SEARCH_MAX_LENGTH)
   q?: string;
+
+  @ApiPropertyOptional({
+    description: 'Only return quacks by the signed-in user',
+    enum: AUTHOR_FILTERS,
+  })
+  @IsOptional()
+  @IsIn(AUTHOR_FILTERS)
+  author?: (typeof AUTHOR_FILTERS)[number];
 }
