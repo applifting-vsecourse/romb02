@@ -77,4 +77,27 @@ describe("QuackList", () => {
     await userEvent.click(screen.getByRole("button", { name: "Clear search" }))
     expect(onClearSearch).toHaveBeenCalledOnce()
   })
+
+  it("says I have no quacks yet on the Mine tab and offers to write one", async () => {
+    const onWriteFirst = vi.fn()
+    render(
+      <QuackList
+        quacks={[]}
+        isOnlyMine
+        onWriteFirst={onWriteFirst}
+      />,
+    )
+
+    expect(screen.getByText("You haven't posted any quacks yet.")).toBeInTheDocument()
+    expect(screen.queryByText(/Post the first one/)).not.toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole("button", { name: "Write your first quack" }))
+    expect(onWriteFirst).toHaveBeenCalledOnce()
+  })
+
+  it("offers no delete action without a signed-in user", () => {
+    render(<QuackList quacks={[quack()]} />)
+
+    expect(screen.queryByRole("button", { name: "Delete quack" })).not.toBeInTheDocument()
+  })
 })

@@ -84,10 +84,12 @@ export class QuackRepository {
   async getQuacks(filter: {
     viewerId: string;
     searchTerms?: string[];
+    authorId?: string;
   }): Promise<Quack[]> {
     const quacks = await this.prisma.quack.findMany({
       // Every term has to appear somewhere in the text or the author, in any order.
       where: {
+        userId: filter.authorId,
         AND: (filter.searchTerms ?? []).map(escapeLikePattern).map((term) => ({
           OR: [
             { text: { contains: term, mode: 'insensitive' as const } },
@@ -142,6 +144,27 @@ export class QuackRepository {
       },
     });
     return mapPrismaQuackToDomain(quack);
+  }
+
+  async getQuackById(quackId: string): Promise<Quack | null> {
+    const quack = await this.prisma.quack.findUnique({
+      where: { id: quackId },
+    });
+    return quack ? mapPrismaQuackToDomain(quack) : null;
+  }
+
+  // Deletes the quack only if it belongs to the given author, in one statement,
+  // so ownership can't change between a check and the delete. The poll, its
+  // options and votes go with it (ON DELETE CASCADE). Returns whether a quack
+  // was deleted.
+  async deleteQuack(filter: {
+    quackId: string;
+    authorId: string;
+  }): Promise<boolean> {
+    const { count } = await this.prisma.quack.deleteMany({
+      where: { id: filter.quackId, userId: filter.authorId },
+    });
+    return count > 0;
   }
 
   async getPollByQuackId(

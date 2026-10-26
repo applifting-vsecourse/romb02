@@ -35,4 +35,15 @@ describe('ListQuacksQueryDto', () => {
     const { errors } = await validateQuery({ q: 'a'.repeat(100) });
     expect(errors).toHaveLength(0);
   });
+
+  it('accepts the "me" author filter', async () => {
+    const { dto, errors } = await validateQuery({ author: 'me' });
+    expect(errors).toHaveLength(0);
+    expect(dto.author).toBe('me');
+  });
+
+  it('rejects any other author filter', async () => {
+    const { errors } = await validateQuery({ author: 'u2' });
+    expect(errors).toHaveLength(1);
+  });
 });
